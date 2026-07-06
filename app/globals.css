@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* cream paper + warm pen ink */
+  --cream: #f5ecd9;
+  --cream-deep: #ecdfc4;
+  --ink: #4a4038;
+  --ink-soft: #7d7268;
+  --blush: #e9a6b0;
+  --sage: #9bb89a;
+  --sky: #a9c4d6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-blush: var(--blush);
+  --color-sage: var(--sage);
+  --color-sky: var(--sky);
+  --font-hand: var(--font-hand);
+  --font-body: var(--font-body);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-body), ui-rounded, system-ui, sans-serif;
+  background-color: var(--cream);
+  /* Layer 1: your real paper texture (drop /public/paper.png later — swaps in automatically).
+     Layer 2: a soft cream vignette. Layer 3: subtle grain so it never looks flat. */
+  background-image:
+    url("/paper.png"),
+    radial-gradient(120% 120% at 50% 0%, #fbf5e8 0%, var(--cream) 55%, var(--cream-deep) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-repeat: repeat, no-repeat, repeat;
+  background-size: 480px, cover, 140px;
+  background-attachment: fixed, fixed, fixed;
 }
+
+/* handwritten display helper */
+.hand {
+  font-family: var(--font-hand), cursive;
+}
+
+/* gentle "the notebook opens" entrance */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.rise-1 { animation-delay: 0.15s; }
+.rise-2 { animation-delay: 0.35s; }
+.rise-3 { animation-delay: 0.6s; }
