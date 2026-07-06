@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
-import { Caveat, Patrick_Hand } from "next/font/google";
+import {
+  Caveat,
+  Patrick_Hand,
+  Modak,
+  Dancing_Script,
+  Special_Elite,
+  Permanent_Marker,
+  Archivo_Black,
+} from "next/font/google";
 import "./globals.css";
 
 // Caveat = flowy handwritten display. Patrick Hand = neat, readable handwriting for body.
@@ -14,6 +22,13 @@ const patrick = Patrick_Hand({
   subsets: ["latin"],
 });
 
+// writing-style fonts for text elements
+const modak = Modak({ variable: "--font-bubble", weight: "400", subsets: ["latin"] });
+const dancing = Dancing_Script({ variable: "--font-cursive", subsets: ["latin"] });
+const specialElite = Special_Elite({ variable: "--font-typewriter", weight: "400", subsets: ["latin"] });
+const marker = Permanent_Marker({ variable: "--font-marker", weight: "400", subsets: ["latin"] });
+const archivoBlack = Archivo_Black({ variable: "--font-cutout", weight: "400", subsets: ["latin"] });
+
 export const metadata: Metadata = {
   title: "scrapbook ♡",
   description: "a cozy little scrapbook you make by hand and share with someone you love",
@@ -25,7 +40,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${caveat.variable} ${patrick.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${caveat.variable} ${patrick.variable} ${modak.variable} ${dancing.variable} ${specialElite.variable} ${marker.variable} ${archivoBlack.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
