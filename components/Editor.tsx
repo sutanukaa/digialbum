@@ -23,6 +23,22 @@ const MAX_EW = 520;
 const rid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
 
+const DRAFT_KEY = "scrapbook-draft";
+
+// data URLs (unlike blob: URLs) survive a reload, so photos persist in the draft
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
+  const blob = await (await fetch(dataUrl)).blob();
+  return new File([blob], name, { type: blob.type || "image/png" });
+}
+
 export function Editor({
   mode,
   scrapbookId,
@@ -45,7 +61,6 @@ export function Editor({
   const [result, setResult] = useState<{ id: string; editToken: string } | null>(null);
   const [target, setTarget] = useState<HTMLElement | null>(null);
 
-  const filesById = useRef<Record<string, File>>({});
   const elRefs = useRef<Record<string, HTMLElement | null>>({});
   const frames = useRef<Record<string, { tx: number; ty: number; rot: number }>>({});
   const photoInput = useRef<HTMLInputElement>(null);
@@ -77,22 +92,24 @@ export function Editor({
   const nextZ = () => (els.length ? Math.max(...els.map((e) => e.z)) + 1 : 1);
   const minZ = () => (els.length ? Math.min(...els.map((e) => e.z)) - 1 : 0);
 
-  function addPhotos(files: FileList | null) {
+  async function addPhotos(files: FileList | null) {
     if (!files) return;
-    const additions: El[] = Array.from(files).map((file, k) => {
-      const id = rid();
-      filesById.current[id] = file;
-      return {
-        id,
-        type: "photo",
-        src: URL.createObjectURL(file),
-        x: 28 + (k % 3) * 4,
-        y: 22 + (k % 3) * 4,
-        w: 40,
-        rot: k % 2 ? 3 : -3,
-        z: nextZ() + k,
-      } as El;
-    });
+    const arr = Array.from(files);
+    const urls = await Promise.all(arr.map(fileToDataUrl));
+    const baseZ = nextZ();
+    const additions: El[] = arr.map(
+      (_file, k) =>
+        ({
+          id: rid(),
+          type: "photo",
+          src: urls[k],
+          x: 28 + (k % 3) * 4,
+          y: 22 + (k % 3) * 4,
+          w: 40,
+          rot: k % 2 ? 3 : -3,
+          z: baseZ + k,
+        }) as El
+    );
     mutatePage((els) => [...els, ...additions]);
     setSelId(additions[additions.length - 1].id);
   }
@@ -141,19 +158,24 @@ export function Editor({
       const fd = new FormData();
       fd.append("title", title);
 
-      // serialize pages; new photos become {upload: index}, files appended in order
+      // photos with a data-URL src are new -> upload them (sequentially, so the
+      // append order matches each element's upload index); http(s) srcs stay as-is
       let fileIdx = 0;
-      const serialized: Page[] = pages.map((p) => ({
-        elements: p.elements.map((e) => {
-          if (e.type === "photo" && filesById.current[e.id]) {
-            fd.append("photos", filesById.current[e.id]);
+      const serialized: Page[] = [];
+      for (const p of pages) {
+        const elements: El[] = [];
+        for (const e of p.elements) {
+          if (e.type === "photo" && typeof e.src === "string" && e.src.startsWith("data:")) {
+            fd.append("photos", await dataUrlToFile(e.src, `photo-${fileIdx}.png`));
             const { src, ...rest } = e;
             void src;
-            return { ...rest, upload: fileIdx++ } as El;
+            elements.push({ ...rest, upload: fileIdx++ } as El);
+          } else {
+            elements.push(e);
           }
-          return e;
-        }),
-      }));
+        }
+        serialized.push({ elements });
+      }
       fd.append("pages", JSON.stringify(serialized));
       if (mode === "edit") fd.append("token", token ?? "");
 
@@ -163,6 +185,9 @@ export function Editor({
           : await fetch(`/api/scrapbooks/${scrapbookId}`, { method: "PUT", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "something went wrong");
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {}
       setResult(mode === "create" ? { id: json.id, editToken: json.editToken } : { id: scrapbookId!, editToken: token! });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "something went wrong");
@@ -176,6 +201,30 @@ export function Editor({
   useEffect(() => {
     setTarget(selId ? elRefs.current[selId] ?? null : null);
   }, [selId, cur, pages]);
+
+  // restore an unsaved draft on load (create mode only), so a reload never loses work
+  useEffect(() => {
+    if (mode !== "create") return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as { title?: string; pages?: Page[] };
+        if (d.pages?.length) {
+          setPages(d.pages);
+          setTitle(d.title ?? "");
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // auto-save the draft as you work
+  useEffect(() => {
+    if (mode !== "create" || result) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, pages }));
+    } catch {}
+  }, [title, pages, mode, result]);
 
   // fit the page to the available width
   useEffect(() => {
