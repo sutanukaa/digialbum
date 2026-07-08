@@ -15,6 +15,13 @@ export function renderElement(el: El, pw: number) {
   };
 
   if (el.type === "photo") {
+    // bare = just the image (sits inside a frame doodle); otherwise a polaroid
+    if (el.bare) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={el.id} src={el.src} alt="" style={{ ...base, height: "auto", display: "block", borderRadius: 2 }} />
+      );
+    }
     return (
       <div key={el.id} style={base}>
         <div

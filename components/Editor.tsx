@@ -11,11 +11,14 @@ import {
   type El,
   type Page,
   type TextEl,
+  type PhotoEl,
 } from "@/lib/scrapbook";
 import { textCss, TextContent, TEXT_STYLES } from "@/components/StyledText";
+import { SuggestionForm } from "@/components/SuggestionForm";
+import { HeartsBurst } from "@/components/HeartsBurst";
+import { useCyclingPlaceholder } from "@/components/useCyclingPlaceholder";
 
-const EW = 520;
-const EH = Math.round(EW * PAGE_RATIO);
+const MAX_EW = 520;
 
 const rid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -46,15 +49,22 @@ export function Editor({
   const elRefs = useRef<Record<string, HTMLElement | null>>({});
   const frames = useRef<Record<string, { tx: number; ty: number; rot: number }>>({});
   const photoInput = useRef<HTMLInputElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // responsive canvas: render the page at whatever width fits (measured live).
+  // No CSS scaling, so Moveable's drag/resize math stays exact.
+  const [ew, setEw] = useState(MAX_EW);
+  const eh = Math.round(ew * PAGE_RATIO);
+  const titlePh = useCyclingPlaceholder();
 
   const page = pages[cur];
   const els = page.elements;
   const selected = els.find((e) => e.id === selId) ?? null;
 
   // ---- helpers ----
-  const pxX = (el: El) => (el.x / 100) * EW;
-  const pxY = (el: El) => (el.y / 100) * EH;
-  const pxW = (el: El) => (el.w / 100) * EW;
+  const pxX = (el: El) => (el.x / 100) * ew;
+  const pxY = (el: El) => (el.y / 100) * eh;
+  const pxW = (el: El) => (el.w / 100) * ew;
 
   function mutatePage(fn: (els: El[]) => El[]) {
     setPages((prev) => prev.map((p, i) => (i === cur ? { elements: fn(p.elements) } : p)));
@@ -167,6 +177,17 @@ export function Editor({
     setTarget(selId ? elRefs.current[selId] ?? null : null);
   }, [selId, cur, pages]);
 
+  // fit the page to the available width
+  useEffect(() => {
+    const measure = () => {
+      const w = stageRef.current?.clientWidth ?? MAX_EW;
+      setEw(Math.max(240, Math.min(MAX_EW, w - 16)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row">
       {/* ---- left: tools ---- */}
@@ -178,7 +199,7 @@ export function Editor({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="our little scrapbook"
+          placeholder={titlePh}
           className="w-full bg-transparent border-b-2 border-ink/20 focus:border-blush outline-none hand text-3xl text-ink placeholder:text-ink-soft/40 pb-1"
         />
 
@@ -193,17 +214,23 @@ export function Editor({
         {/* doodle tray */}
         <div>
           <p className="hand text-xl text-ink mb-2">tape in a doodle</p>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-2 max-h-56 overflow-y-auto pr-1">
             {DOODLE_TRAY.map((src) => (
               <button
                 key={src}
                 onClick={() => addDoodle(src)}
-                className="aspect-square rounded-lg bg-[#fffdf8]/70 border border-ink/10 hover:border-blush p-1 flex items-center justify-center"
+                className="aspect-square rounded-lg bg-[#fffdf8]/70 border border-ink/10 hover:border-blush hover:scale-110 hover:z-10 transition-transform p-1 flex items-center justify-center"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" className="max-w-full max-h-full object-contain" />
               </button>
             ))}
+          </div>
+          <p className="hand text-lg text-ink-soft/80 mt-2 text-center">
+            more little doodles on the way… ✿ pinky promise
+          </p>
+          <div className="mt-3">
+            <SuggestionForm kind="doodle" placeholder="wish for a doodle…" trigger="want a doodle? ask me ♡" />
           </div>
         </div>
 
@@ -227,21 +254,42 @@ export function Editor({
           onClick={save}
           className="w-full rounded-full bg-ink text-cream py-3 text-lg shadow-[3px_4px_0_0_rgba(74,64,56,0.25)] transition-transform hover:-translate-y-0.5 disabled:opacity-40"
         >
-          {saving ? "taping it all together…" : mode === "edit" ? "save changes →" : "save & get a share link →"}
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block animate-spin">✿</span> taping it all together…
+            </span>
+          ) : mode === "edit" ? (
+            "save changes →"
+          ) : (
+            "save & get a share link →"
+          )}
         </button>
       </div>
 
       {/* ---- center: the page ---- */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 overflow-auto">
+      <div ref={stageRef} className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 gap-4 overflow-auto">
         <div
           className="relative shadow-[6px_10px_30px_rgba(74,64,56,0.25)] rounded-[4px]"
-          style={{ width: EW, height: EH, backgroundColor: "#f7efdd", backgroundImage: "url(/paper.png)", backgroundSize: "360px", overflow: "hidden" }}
+          style={{ width: ew, height: eh, isolation: "isolate", backgroundColor: "#f7efdd", backgroundImage: "url(/paper.png)", backgroundSize: "360px", overflow: "hidden" }}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setSelId(null);
           }}
         >
           {/* bottom margin line */}
           <div className="absolute left-[7%] right-[7%]" style={{ bottom: "12%", borderTop: "1.5px dashed rgba(74,64,56,0.18)" }} />
+
+          {/* blank-page hello */}
+          {els.length === 0 ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none opacity-60">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/doodles/sparkles.png" alt="" className="w-16 h-auto mb-2" />
+              <p className="hand text-2xl text-ink-soft leading-snug">
+                your blank page awaits…
+                <br />
+                tape something in ✿
+              </p>
+            </div>
+          ) : null}
 
           {els
             .slice()
@@ -257,6 +305,7 @@ export function Editor({
                   elRefs.current[el.id] = node;
                 }}
                 px={{ x: pxX(el), y: pxY(el), w: pxW(el) }}
+                ew={ew}
               />
             ))}
 
@@ -285,7 +334,7 @@ export function Editor({
               }}
               onDragEnd={() => {
                 const f = frames.current[selected.id];
-                updateEl(selected.id, { x: (f.tx / EW) * 100, y: (f.ty / EH) * 100 });
+                updateEl(selected.id, { x: (f.tx / ew) * 100, y: (f.ty / eh) * 100 });
               }}
               onResizeStart={(e) => {
                 frames.current[selected.id] = { tx: pxX(selected), ty: pxY(selected), rot: selected.rot };
@@ -305,7 +354,7 @@ export function Editor({
               onResizeEnd={(e) => {
                 const f = frames.current[selected.id];
                 const w = Number((e.target as HTMLElement).dataset.w || pxW(selected));
-                updateEl(selected.id, { w: (w / EW) * 100, x: (f.tx / EW) * 100, y: (f.ty / EH) * 100 });
+                updateEl(selected.id, { w: (w / ew) * 100, x: (f.tx / ew) * 100, y: (f.ty / eh) * 100 });
               }}
               onRotateStart={(e) => {
                 frames.current[selected.id] = { tx: pxX(selected), ty: pxY(selected), rot: selected.rot };
@@ -368,6 +417,7 @@ function EditorElement({
   onEditText,
   setRef,
   px,
+  ew,
 }: {
   el: El;
   selected: boolean;
@@ -375,6 +425,7 @@ function EditorElement({
   onEditText: (text: string) => void;
   setRef: (node: HTMLElement | null) => void;
   px: { x: number; y: number; w: number };
+  ew: number;
 }) {
   const common = {
     ref: setRef as React.Ref<HTMLDivElement>,
@@ -393,6 +444,15 @@ function EditorElement({
   };
 
   if (el.type === "photo") {
+    // bare = raw image, no white polaroid frame (toggled per-photo in the panel)
+    if (el.bare) {
+      return (
+        <div {...common}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={el.src} alt="" draggable={false} style={{ width: "100%", height: "auto", display: "block", borderRadius: 2 }} />
+        </div>
+      );
+    }
     return (
       <div {...common}>
         <div style={{ background: "#fffdf8", padding: "5% 5% 12% 5%", borderRadius: 3, boxShadow: "3px 5px 12px rgba(74,64,56,0.18)" }}>
@@ -420,7 +480,7 @@ function EditorElement({
       }}
       style={{
         ...common.style,
-        fontSize: (el.size / 100) * EW,
+        fontSize: (el.size / 100) * ew,
         ...textCss(el.font, el.color),
       }}
     >
@@ -451,6 +511,18 @@ function SelectedControls({
           delete
         </button>
       </div>
+
+      {el.type === "photo" ? (
+        <label className="flex items-center gap-2 text-base text-ink cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!(el as PhotoEl).bare}
+            onChange={(e) => onChange({ bare: !e.target.checked })}
+            className="w-4 h-4 accent-blush"
+          />
+          polaroid frame
+        </label>
+      ) : null}
 
       {el.type === "text" ? (
         <>
@@ -518,6 +590,7 @@ function SavedCard({ id, editToken, edited, onClose }: { id: string; editToken: 
   return (
     <div className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm flex items-center justify-center p-6" onClick={onClose}>
       <div className="relative bg-cream max-w-md w-full rounded-3xl p-8 shadow-2xl text-center border border-ink/10" onClick={(e) => e.stopPropagation()}>
+        <HeartsBurst />
         <button
           onClick={onClose}
           aria-label="close"

@@ -9,6 +9,7 @@ import {
   Archivo_Black,
 } from "next/font/google";
 import "./globals.css";
+import { SoundToggle } from "@/components/SoundToggle";
 
 // Caveat = flowy handwritten display. Patrick Hand = neat, readable handwriting for body.
 const caveat = Caveat({
@@ -44,7 +45,10 @@ export default function RootLayout({
       lang="en"
       className={`${caveat.variable} ${patrick.variable} ${modak.variable} ${dancing.variable} ${specialElite.variable} ${marker.variable} ${archivoBlack.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <SoundToggle />
+      </body>
     </html>
   );
 }

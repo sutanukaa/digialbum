@@ -36,6 +36,32 @@ body {
   background-repeat: repeat, no-repeat, repeat;
   background-size: 480px, cover, 140px;
   background-attachment: fixed, fixed, fixed;
+  /* a little pencil follows you around ✎ (tip is the click point) */
+  cursor: url("/pencil.svg") 6 6, auto;
+}
+
+/* keep a text caret where you actually type */
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+/* pink crayon on anything clickable (where a pointer hand would normally show) */
+a,
+button,
+label,
+summary,
+select,
+[role="button"],
+.cursor-pointer {
+  cursor: url("/crayon.svg") 6 6, pointer;
+}
+
+/* …but a disabled button shouldn't tempt you */
+button:disabled,
+[aria-disabled="true"] {
+  cursor: url("/pencil.svg") 6 6, not-allowed;
 }
 
 /* handwritten display helper */
@@ -52,3 +78,69 @@ body {
 .rise-1 { animation-delay: 0.15s; }
 .rise-2 { animation-delay: 0.35s; }
 .rise-3 { animation-delay: 0.6s; }
+
+/* ---------- whimsy ---------- */
+
+/* blush text selection */
+::selection { background: rgba(233, 166, 176, 0.45); color: var(--ink); }
+
+/* a doodle that gently sways forever (wrap the element in .sway) */
+@keyframes sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+.sway { animation: sway 5s ease-in-out infinite; transform-origin: 50% 85%; }
+
+/* quick wiggle on hover */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+.hover-wiggle:hover { animation: wiggle 0.45s ease-in-out; }
+
+/* soft "pressed" feedback on anything clickable */
+a:active, button:active:not(:disabled), [role="button"]:active { filter: brightness(0.95); }
+
+/* hearts that burst out of the save card */
+@keyframes heart-fly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.2) rotate(0deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1) rotate(var(--dr)); }
+}
+
+/* peeling page corner (bottom-right) — invites the turn */
+.page-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, transparent 45%, rgba(74, 64, 56, 0.16) 47%, #ece2cb 53%);
+  box-shadow: -3px -3px 7px rgba(74, 64, 56, 0.14);
+  border-radius: 0 0 4px 0;
+  transition: width 0.28s ease, height 0.28s ease;
+  pointer-events: none;
+}
+.page-front:hover .page-corner { width: 58px; height: 58px; }
+
+/* an underline that draws itself in */
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* the occasional drifting petal */
+@keyframes fall {
+  0% { transform: translateY(-8vh) translateX(0) rotate(0deg); opacity: 0; }
+  12% { opacity: 0.5; }
+  85% { opacity: 0.5; }
+  100% { transform: translateY(86vh) translateX(var(--sx, 20px)) rotate(var(--sr, 180deg)); opacity: 0; }
+}
+
+/* whoever prefers calm, gets calm */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

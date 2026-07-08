@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PetalDrift } from "@/components/PetalDrift";
 
 // taped polaroids of loved ones, flung across the page like a real scrapbook —
 // mixed sizes, irregular positions, every one tilted at a different angle.
@@ -31,6 +32,8 @@ function Polaroid({ src, tape, rot }: { src: string; tape: string; rot: number }
 export default function Cover() {
   return (
     <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 text-center overflow-hidden">
+      <PetalDrift />
+
       {/* scattered polaroids — outer div animates the entrance, inner div holds the
           tilt so the two transforms don't overwrite each other */}
       {POLAROIDS.map((p, i) => (
@@ -51,19 +54,32 @@ export default function Cover() {
           ♡ welcome ♡
         </p>
 
-        {/* hero bouquet */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/cover-doodle.png"
-          alt="a little bouquet of sunflowers tied with a bow"
-          className="rise rise-1 w-64 sm:w-80 h-auto -rotate-2 select-none pointer-events-none
-                     drop-shadow-[2px_6px_10px_rgba(74,64,56,0.18)]"
-        />
+        {/* hero bouquet — sways gently */}
+        <div className="rise rise-1 sway">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cover-doodle.png"
+            alt="a little bouquet of sunflowers tied with a bow"
+            className="w-64 sm:w-80 h-auto select-none pointer-events-none
+                       drop-shadow-[2px_6px_10px_rgba(74,64,56,0.18)]"
+          />
+        </div>
 
         {/* handwritten title */}
-        <h1 className="rise rise-1 hand text-ink text-7xl sm:text-8xl leading-[0.95] -mt-2">
+        <h1 className="rise rise-1 hand text-ink text-6xl sm:text-8xl leading-[0.95] -mt-2">
           a little scrapbook
         </h1>
+
+        {/* an underline that draws itself in */}
+        <svg className="rise rise-1 w-56 sm:w-80 h-auto text-blush -mt-1" viewBox="0 0 280 14" fill="none" aria-hidden>
+          <path
+            d="M4 8 C 40 2, 70 12, 104 7 S 170 2, 200 8 S 250 12, 276 5"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            style={{ strokeDasharray: 440, strokeDashoffset: 440, animation: "draw 1.1s ease-out 1s forwards" }}
+          />
+        </svg>
 
         {/* subtitle */}
         <p className="rise rise-2 text-ink-soft text-xl sm:text-2xl mt-6 leading-relaxed max-w-lg">
@@ -73,7 +89,7 @@ export default function Cover() {
 
         {/* the invitation */}
         <Link
-          href="/new"
+          href="/start"
           className="rise rise-3 group mt-10 inline-flex items-center gap-2 rounded-full
                      bg-ink text-cream px-10 py-4 text-xl shadow-[3px_5px_0_0_rgba(74,64,56,0.25)]
                      transition-transform hover:-translate-y-0.5 hover:rotate-[-1deg] active:translate-y-0"
