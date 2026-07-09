@@ -43,21 +43,17 @@ export function ScrapbookExport({ pages, title }: { pages: Page[]; title: string
     setErr("");
     try {
       const canvases = await capture();
-      const gap = 28;
-      const w = Math.max(...canvases.map((c) => c.width));
-      const h = canvases.reduce((s, c) => s + c.height, 0) + gap * (canvases.length - 1);
-      const out = document.createElement("canvas");
-      out.width = w;
-      out.height = h;
-      const ctx = out.getContext("2d")!;
-      ctx.fillStyle = "#ecdfc4";
-      ctx.fillRect(0, 0, w, h);
-      let y = 0;
-      for (const c of canvases) {
-        ctx.drawImage(c, (w - c.width) / 2, y);
-        y += c.height + gap;
+      const name = slug(title);
+      if (canvases.length === 1) {
+        download(canvases[0].toDataURL("image/png"), `${name}.png`);
+      } else {
+        // one PNG per page, staggered so the browser doesn't drop rapid downloads
+        for (let i = 0; i < canvases.length; i++) {
+          download(canvases[i].toDataURL("image/png"), `${name}-page-${i + 1}.png`);
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, 350));
+        }
       }
-      download(out.toDataURL("image/png"), `${slug(title)}.png`);
     } catch {
       setErr("hmm, export failed — try again?");
     } finally {

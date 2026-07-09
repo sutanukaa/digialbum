@@ -89,6 +89,16 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
   const clearSlot = (slot: number) => setImages((prev) => prev.map((im, i) => (i === slot ? undefined : im)));
   const setText = (k: number, v: string) => setTexts((prev) => prev.map((t, i) => (i === k ? v : t)));
 
+  function startOver() {
+    if (typeof window !== "undefined" && !window.confirm("start over? this clears your photos and words.")) return;
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {}
+    setImages(template.slots.map(() => undefined));
+    setTexts(template.texts.map((t) => t.text));
+    setTitle("");
+  }
+
   const filledCount = images.filter(Boolean).length;
 
   async function save() {
@@ -162,9 +172,14 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
     <div className="flex-1 flex flex-col lg:flex-row">
       {/* ---- left: panel ---- */}
       <div className="lg:w-[360px] lg:h-screen lg:overflow-y-auto shrink-0 border-b lg:border-b-0 lg:border-r border-ink/10 p-6 space-y-5">
-        <Link href="/templates" className="hand text-2xl text-ink-soft hover:text-ink">
-          ← templates
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/templates" className="hand text-2xl text-ink-soft hover:text-ink">
+            ← templates
+          </Link>
+          <button onClick={startOver} className="text-sm text-ink-soft hover:text-blush">
+            start over
+          </button>
+        </div>
 
         <div>
           <h2 className="hand text-4xl text-ink leading-tight">{template.name}</h2>

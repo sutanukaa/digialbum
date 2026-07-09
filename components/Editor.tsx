@@ -150,6 +150,17 @@ export function Editor({
     setSelId(null);
   }
 
+  function startOver() {
+    if (typeof window !== "undefined" && !window.confirm("start over? this clears everything on your pages.")) return;
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+    setPages([emptyPage()]);
+    setTitle("");
+    setCur(0);
+    setSelId(null);
+  }
+
   // ---- save ----
   async function save() {
     setSaving(true);
@@ -241,9 +252,14 @@ export function Editor({
     <div className="flex-1 flex flex-col lg:flex-row">
       {/* ---- left: tools ---- */}
       <div className="lg:w-[340px] lg:h-screen lg:overflow-y-auto shrink-0 border-b lg:border-b-0 lg:border-r border-ink/10 p-5 space-y-5">
-        <Link href="/" className="hand text-2xl text-ink-soft hover:text-ink">
-          ← cover
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="hand text-2xl text-ink-soft hover:text-ink">
+            ← cover
+          </Link>
+          <button onClick={startOver} className="text-sm text-ink-soft hover:text-blush">
+            start over
+          </button>
+        </div>
 
         <input
           value={title}
