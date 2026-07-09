@@ -10,11 +10,24 @@ import { useCyclingPlaceholder } from "@/components/useCyclingPlaceholder";
 
 const MAX_EW = 500;
 
-type SlotImg = { file: File; url: string };
+// data URLs (not blob: URLs) survive a reload so the draft can restore photos
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
+  const blob = await (await fetch(dataUrl)).blob();
+  return new File([blob], name, { type: blob.type || "image/png" });
+}
 
 export function TemplateEditor({ template }: { template: TemplateDef }) {
+  const draftKey = `scrapbook-template-${template.id}`;
   const [title, setTitle] = useState("");
-  const [images, setImages] = useState<(SlotImg | undefined)[]>(() => template.slots.map(() => undefined));
+  const [images, setImages] = useState<(string | undefined)[]>(() => template.slots.map(() => undefined));
   const [texts, setTexts] = useState<string[]>(() => template.texts.map((t) => t.text));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -38,18 +51,40 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
+  // restore an unsaved draft for THIS template on load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const d = JSON.parse(raw) as { title?: string; images?: (string | undefined)[]; texts?: string[] };
+        if (d.title !== undefined) setTitle(d.title);
+        if (d.images) setImages((prev) => prev.map((im, i) => d.images?.[i] ?? im));
+        if (d.texts) setTexts((prev) => prev.map((t, i) => d.texts?.[i] ?? t));
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // auto-save the draft as you work
+  useEffect(() => {
+    if (result) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ title, images, texts }));
+    } catch {}
+  }, [title, images, texts, result, draftKey]);
+
   function pickFor(slot: number) {
     pendingSlot.current = slot;
     fileInput.current?.click();
   }
-  function onFile(files: FileList | null) {
+  async function onFile(files: FileList | null) {
     const slot = pendingSlot.current;
-    if (files && files[0] && slot !== null) {
-      const file = files[0];
-      setImages((prev) => prev.map((im, i) => (i === slot ? { file, url: URL.createObjectURL(file) } : im)));
-    }
     pendingSlot.current = null;
     if (fileInput.current) fileInput.current.value = "";
+    if (files && files[0] && slot !== null) {
+      const url = await fileToDataUrl(files[0]);
+      setImages((prev) => prev.map((im, i) => (i === slot ? url : im)));
+    }
   }
   const clearSlot = (slot: number) => setImages((prev) => prev.map((im, i) => (i === slot ? undefined : im)));
   const setText = (k: number, v: string) => setTexts((prev) => prev.map((t, i) => (i === k ? v : t)));
@@ -68,12 +103,13 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
       template.decor.forEach((d, j) => {
         elements.push({ id: `d${j}`, type: "doodle", src: d.src, x: d.x, y: d.y, w: d.w, rot: d.rot, z: d.top ? 300 + j : j } as El);
       });
-      // photos in the middle
+      // photos in the middle (sequential so append order matches upload index)
       let fileIdx = 0;
-      template.slots.forEach((s, i) => {
+      for (let i = 0; i < template.slots.length; i++) {
+        const s = template.slots[i];
         const im = images[i];
-        if (!im) return;
-        fd.append("photos", im.file);
+        if (!im) continue;
+        fd.append("photos", await dataUrlToFile(im, `photo-${fileIdx}.png`));
         elements.push({
           id: `p${i}`,
           type: "photo",
@@ -85,7 +121,7 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
           upload: fileIdx++,
           ...(s.fit === "bare" ? { bare: true } : {}),
         } as El);
-      });
+      }
       // text on top
       template.texts.forEach((t, k) => {
         const val = (texts[k] ?? "").trim();
@@ -111,6 +147,9 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
       const res = await fetch("/api/scrapbooks", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "something went wrong");
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {}
       setResult({ id: json.id, editToken: json.editToken });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "something went wrong");
@@ -150,7 +189,7 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
                   <span className="hand text-2xl text-ink-soft w-6 text-center shrink-0">{i + 1}</span>
                   {im ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={im.url} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                    <img src={im} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0" />
                   ) : (
                     <div className="w-12 h-12 rounded-lg border-2 border-dashed border-ink/25 shrink-0" />
                   )}
@@ -209,7 +248,7 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
           <TemplatePage
             template={template}
             pw={ew}
-            images={images.map((im) => im?.url)}
+            images={images}
             texts={texts}
             onSlotClick={pickFor}
             onTextClick={(k) => textInputs.current[k]?.focus()}
