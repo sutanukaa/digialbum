@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { toPages } from "@/lib/scrapbook";
 import BookView from "@/components/BookView";
+import { ScrapbookExport } from "@/components/ScrapbookExport";
 
 export default async function ViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,6 +25,10 @@ export default async function ViewPage({ params }: { params: Promise<{ id: strin
       ) : null}
 
       <BookView pages={pages} />
+
+      <div className="pb-8">
+        <ScrapbookExport pages={pages} title={data.title ?? ""} />
+      </div>
 
       <div className="text-center pb-16">
         <Link href="/" className="hand text-2xl text-ink-soft hover:text-ink underline decoration-wavy">
