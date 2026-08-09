@@ -10,19 +10,7 @@ import { useCyclingPlaceholder } from "@/components/useCyclingPlaceholder";
 
 const MAX_EW = 500;
 
-// data URLs (not blob: URLs) survive a reload so the draft can restore photos
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(fr.result as string);
-    fr.onerror = reject;
-    fr.readAsDataURL(file);
-  });
-}
-async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
-  const blob = await (await fetch(dataUrl)).blob();
-  return new File([blob], name, { type: blob.type || "image/png" });
-}
+import { fileToDataUrl, dataUrlToFile } from "@/lib/image";
 
 export function TemplateEditor({ template }: { template: TemplateDef }) {
   const draftKey = `scrapbook-template-${template.id}`;
@@ -119,7 +107,7 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
         const s = template.slots[i];
         const im = images[i];
         if (!im) continue;
-        fd.append("photos", await dataUrlToFile(im, `photo-${fileIdx}.png`));
+        fd.append("photos", await dataUrlToFile(im, `photo-${fileIdx}.jpg`));
         elements.push({
           id: `p${i}`,
           type: "photo",

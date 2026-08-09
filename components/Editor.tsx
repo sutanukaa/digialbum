@@ -25,19 +25,7 @@ const rid = () =>
 
 const DRAFT_KEY = "scrapbook-draft";
 
-// data URLs (unlike blob: URLs) survive a reload, so photos persist in the draft
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(fr.result as string);
-    fr.onerror = reject;
-    fr.readAsDataURL(file);
-  });
-}
-async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
-  const blob = await (await fetch(dataUrl)).blob();
-  return new File([blob], name, { type: blob.type || "image/png" });
-}
+import { fileToDataUrl, dataUrlToFile } from "@/lib/image";
 
 export function Editor({
   mode,
@@ -177,7 +165,7 @@ export function Editor({
         const elements: El[] = [];
         for (const e of p.elements) {
           if (e.type === "photo" && typeof e.src === "string" && e.src.startsWith("data:")) {
-            fd.append("photos", await dataUrlToFile(e.src, `photo-${fileIdx}.png`));
+            fd.append("photos", await dataUrlToFile(e.src, `photo-${fileIdx}.jpg`));
             const { src, ...rest } = e;
             void src;
             elements.push({ ...rest, upload: fileIdx++ } as El);
