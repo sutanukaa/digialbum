@@ -74,7 +74,7 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
         const url = await fileToDataUrl(files[0]);
         setImages((prev) => prev.map((im, i) => (i === slot ? url : im)));
       } catch {
-        alert("that photo couldn't be read (HEIC isn't supported by browsers) — please convert it to JPG or PNG");
+        alert("that photo couldn't be read — is it a valid image file? try re-exporting it as JPG or PNG");
       }
     }
   }

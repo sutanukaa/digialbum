@@ -86,7 +86,7 @@ export function Editor({
     const results = await Promise.all(arr.map((f) => fileToDataUrl(f).catch(() => null)));
     const urls = results.filter((u): u is string => u !== null);
     if (urls.length < arr.length)
-      alert("some photos couldn't be read (HEIC isn't supported by browsers) — please convert them to JPG or PNG");
+      alert("some photos couldn't be read — are they valid image files? try re-exporting them as JPG or PNG");
     if (!urls.length) return;
     const baseZ = nextZ();
     const additions: El[] = urls.map(
