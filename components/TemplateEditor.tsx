@@ -68,10 +68,13 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
   async function onFile(files: FileList | null) {
     const slot = pendingSlot.current;
     pendingSlot.current = null;
+    // snapshot BEFORE clearing the input — e.target.files is a live FileList
+    // that empties the moment value is reset
+    const file = files?.[0];
     if (fileInput.current) fileInput.current.value = "";
-    if (files && files[0] && slot !== null) {
+    if (file && slot !== null) {
       try {
-        const url = await fileToDataUrl(files[0]);
+        const url = await fileToDataUrl(file);
         setImages((prev) => prev.map((im, i) => (i === slot ? url : im)));
       } catch {
         alert("that photo couldn't be read — is it a valid image file? try re-exporting it as JPG or PNG");
