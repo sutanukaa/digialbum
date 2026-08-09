@@ -70,8 +70,12 @@ export function TemplateEditor({ template }: { template: TemplateDef }) {
     pendingSlot.current = null;
     if (fileInput.current) fileInput.current.value = "";
     if (files && files[0] && slot !== null) {
-      const url = await fileToDataUrl(files[0]);
-      setImages((prev) => prev.map((im, i) => (i === slot ? url : im)));
+      try {
+        const url = await fileToDataUrl(files[0]);
+        setImages((prev) => prev.map((im, i) => (i === slot ? url : im)));
+      } catch {
+        alert("that photo couldn't be read (HEIC isn't supported by browsers) — please convert it to JPG or PNG");
+      }
     }
   }
   const clearSlot = (slot: number) => setImages((prev) => prev.map((im, i) => (i === slot ? undefined : im)));

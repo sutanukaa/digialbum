@@ -83,14 +83,18 @@ export function Editor({
   async function addPhotos(files: FileList | null) {
     if (!files) return;
     const arr = Array.from(files);
-    const urls = await Promise.all(arr.map(fileToDataUrl));
+    const results = await Promise.all(arr.map((f) => fileToDataUrl(f).catch(() => null)));
+    const urls = results.filter((u): u is string => u !== null);
+    if (urls.length < arr.length)
+      alert("some photos couldn't be read (HEIC isn't supported by browsers) — please convert them to JPG or PNG");
+    if (!urls.length) return;
     const baseZ = nextZ();
-    const additions: El[] = arr.map(
-      (_file, k) =>
+    const additions: El[] = urls.map(
+      (url, k) =>
         ({
           id: rid(),
           type: "photo",
-          src: urls[k],
+          src: url,
           x: 28 + (k % 3) * 4,
           y: 22 + (k % 3) * 4,
           w: 40,
